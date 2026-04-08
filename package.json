@@ -1,0 +1,26 @@
+{
+  "name": "vuepress-template",
+  "version": "1.0.0",
+  "description": "Template for course material",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "docs:build": "vuepress build docs",
+    "docs:clean-dev": "vuepress dev docs --clean-cache",
+    "docs:dev": "vuepress dev docs",
+    "docs:update-package": "npx vp-update"
+  },
+  "devDependencies": {
+    "@vuepress/bundler-vite": "^2.0.0-rc.28",
+    "@vuepress/theme-default": "^2.0.0-rc.128",
+    "sass-embedded": "^1.99.0",
+    "vue": "^3.5.32",
+    "vuepress": "^2.0.0-rc.28",
+    "vuepress-theme-hope": "^2.0.0-rc.106"
+  },
+  "dependencies": {
+    "@vuepress/plugin-llms": "^2.0.0-rc.128",
+    "@vuepress/plugin-slimsearch": "^2.0.0-rc.128",
+    "mermaid": "^11.14.0"
+  }
+}

@@ -1,0 +1,8 @@
+// place your custom styles here
+
+//Makes sure the title is a single color
+.vp-hero-title {
+    background: var(--vp-c-accent) !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+}
