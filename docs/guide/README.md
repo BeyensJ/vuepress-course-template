@@ -19,7 +19,7 @@ Clone the repository and install the dependencies:
 
 ```bash
 # Clone the repository
-git clone git@github.com:itfactory-tm/vuepress-course-template.git
+git clone https://github.com/BeyensJ/vuepress-course-template.git
 
 # Enter the directory
 cd vuepress-course-template
