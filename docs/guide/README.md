@@ -15,7 +15,7 @@ To work with this template locally, follow these steps:
 Ensure you have **Node.js** (v18 or higher) installed on your machine.
 
 ### 2. Installation
-Clone the repository and install the dependencies:
+Download the repository and install the dependencies:
 
 ```bash
 # Clone the repository
@@ -23,6 +23,9 @@ git clone https://github.com/BeyensJ/vuepress-course-template.git
 
 # Enter the directory
 cd vuepress-course-template
+
+# Remove current git repo
+rm -r .git
 
 # Install dependencies
 npm install
