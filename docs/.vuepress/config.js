@@ -4,13 +4,15 @@ import { hopeTheme } from 'vuepress-theme-hope'
 import { llmsPlugin } from '@vuepress/plugin-llms'
 import sidebar from './sidebar.js'
 
+const base_url = "https://itf-course-template.netlify.app/";
+
 export default defineUserConfig({
     lang: 'en-US',
 
     title: 'Vuepress Template',
     description: '',
     theme: hopeTheme({
-        hostname: "https://vuepress-template.netlify.app",
+        hostname: base_url,
         logo: '/logo.png',
         markdown: {
             tabs: true,
@@ -52,7 +54,7 @@ export default defineUserConfig({
 
     plugins: [
         llmsPlugin({
-            domain: "https://vuepress-template.netlify.app",
+            domain: base_url,
         }),
     ],
 
