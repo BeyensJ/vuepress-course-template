@@ -24,10 +24,10 @@ footer: © 2026 - Jitse Beyens
 ## Course Information
 
 ::: info IT Factory
-This course is taught to all first year students of the IT Factory (bachelors in Applied Computer Science and Electronics-ICT) @ Thomas More Kempen.
+This course is taught to all XXXXXX year students of the IT Factory (bachelors in Applied Computer Science and Electronics-ICT) @ Thomas More Kempen.
 :::
 
 ### Prerequisites
 
 Students following this course should have adequate knowledge of:
-
+- List Prior knowledge here
