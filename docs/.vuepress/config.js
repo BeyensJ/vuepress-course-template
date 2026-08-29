@@ -45,6 +45,7 @@ export default defineUserConfig({
                     { text: "Introduction", link: "/guide/" },
                     { text: "Features", link: "/guide/features.md" },
                     { text: "Configuration", link: "/guide/config.md" },
+                    { text: "Chatbot", link: "/guide/coursechat.md" },
                 ],
             },
         ],
