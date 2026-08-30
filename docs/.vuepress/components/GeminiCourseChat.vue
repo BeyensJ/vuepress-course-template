@@ -115,19 +115,112 @@
         </div>
       </div>
 
+      <!-- Model Selection Bar -->
+      <div class="model-selection-bar">
+        <div class="model-select-left">
+          <label for="gemini-model-select" class="model-select-label">
+            <span class="model-brain-icon">🧠</span>
+            <strong>AI Model:</strong>
+          </label>
+          <div class="select-wrapper">
+            <select 
+              id="gemini-model-select" 
+              v-model="selectedModel" 
+              class="model-dropdown"
+              :disabled="loading"
+            >
+              <option 
+                v-for="m in availableModels" 
+                :key="m.id" 
+                :value="m.id" 
+                :disabled="isModelDisabled(m.id)"
+              >
+                {{ m.name }} — {{ m.rpm }} | {{ m.rpd }} {{ isModelDisabled(m.id) ? `⛔ (Unavailable - ${remainingSeconds[m.id]}s left)` : '' }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <button type="button" @click="showQuotaModal = true" class="btn-view-quotas">
+          📊 View Model Quotas & Status
+        </button>
+      </div>
+
+      <div v-if="modelSwitchNotification" class="notification-banner">
+        ⚡ {{ modelSwitchNotification }}
+      </div>
+
+      <!-- Floating Modal for Model Quotas & Availability -->
+      <div v-if="showQuotaModal" class="modal-backdrop" @click.self="showQuotaModal = false">
+        <div class="modal-dialog quota-modal-dialog">
+          <button type="button" class="modal-close-btn" @click="showQuotaModal = false" title="Close modal">✕</button>
+          
+          <div class="quota-modal-header">
+            <h3>📊 Gemini Models, Rate Limits & Quotas</h3>
+            <p class="quota-modal-intro">Choose an AI model for your questions. If a model encounters a rate limit or unavailability, it will temporarily pause and auto-switch to keep your session active.</p>
+          </div>
+
+          <div class="quota-cards-grid">
+            <div 
+              v-for="m in availableModels" 
+              :key="m.id" 
+              class="quota-card"
+              :class="{ 
+                'card-selected': selectedModel === m.id, 
+                'card-disabled': isModelDisabled(m.id) 
+              }"
+            >
+              <div class="quota-card-top">
+                <div class="quota-card-title-group">
+                  <strong>{{ m.name }}</strong>
+                  <span class="quota-status-tag" :class="isModelDisabled(m.id) ? 'tag-cooldown' : (selectedModel === m.id ? 'tag-selected' : 'tag-available')">
+                    {{ isModelDisabled(m.id) ? `⛔ Cooldown (${remainingSeconds[m.id]}s)` : (selectedModel === m.id ? '✓ Selected' : m.badge) }}
+                  </span>
+                </div>
+                <p class="quota-card-desc">{{ m.description }}</p>
+              </div>
+
+              <div class="quota-metrics-list">
+                <div class="metric-item">
+                  <span class="metric-label">Rate Limit:</span>
+                  <span class="metric-val">{{ m.rpm }}</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Daily Limit:</span>
+                  <span class="metric-val">{{ m.rpd }}</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Context Limit:</span>
+                  <span class="metric-val">{{ m.tpm }}</span>
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                @click="selectModelFromCard(m.id)" 
+                :disabled="isModelDisabled(m.id) || selectedModel === m.id" 
+                class="btn-card-select"
+              >
+                {{ isModelDisabled(m.id) ? `Disabled (${remainingSeconds[m.id]}s left)` : (selectedModel === m.id ? 'Currently Selected' : 'Use This Model') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Main Question Input Box -->
       <div class="input-area">
         <textarea 
           v-model="question" 
-          placeholder="Ask me a question about this course... (Press Ctrl+Enter to send)"
-          @keydown.ctrl.enter="askQuestion"
-          @keydown.meta.enter="askQuestion"
+          placeholder="Ask any question about this course... (Press Ctrl+Enter to send)"
+          @keydown.ctrl.enter="askQuestion()"
+          @keydown.meta.enter="askQuestion()"
           :disabled="loading"
           class="chat-textarea"
         ></textarea>
         <div class="input-actions">
           <span class="input-hint">Ctrl + Enter to send</span>
-          <button @click="askQuestion" :disabled="loading || !question.trim()" class="btn-ask">
+          <button @click="askQuestion()" :disabled="loading || !String(question || '').trim()" class="btn-ask">
             <span v-if="loading" class="spinner"></span>
             {{ loading ? botName + ' is thinking...' : 'Ask ' + botName }}
           </button>
@@ -170,7 +263,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { marked } from 'marked';
 
 const props = defineProps({
@@ -192,9 +285,26 @@ const defaultApiKey = typeof __GEMINI_API_KEY__ !== 'undefined' ? __GEMINI_API_K
 const userApiKey = ref('');
 const inputApiKey = ref('');
 const showKeyModal = ref(false);
+const showQuotaModal = ref(false);
 const showKeyText = ref(false);
 const keySuccessMessage = ref('');
 const keyError = ref('');
+
+const availableModels = ref([
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', badge: 'Recommended', description: 'Latest generation, fast & accurate', rpm: '5 RPM', rpd: '20 RPD', tpm: '250K TPM' },
+  { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash', badge: 'Latest', description: 'High performance flash model', rpm: '5 RPM', rpd: '20 RPD', tpm: '250K TPM' },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite', badge: 'High Quota', description: 'Fast response with 500 daily requests', rpm: '15 RPM', rpd: '500 RPD', tpm: '250K TPM' },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', badge: 'High Quota', description: 'Lightweight model with 500 daily requests', rpm: '15 RPM', rpd: '500 RPD', tpm: '250K TPM' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', badge: 'Standard', description: 'General purpose text model', rpm: '5 RPM', rpd: '20 RPD', tpm: '250K TPM' },
+  { id: 'gemini-3-flash', name: 'Gemini 3 Flash', badge: 'General', description: 'Standard flash text model', rpm: '5 RPM', rpd: '20 RPD', tpm: '250K TPM' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', badge: 'Standard', description: 'Stable text model', rpm: '5 RPM', rpd: '20 RPD', tpm: '250K TPM' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', badge: 'Lightweight', description: 'Fast 10 RPM text model', rpm: '10 RPM', rpd: '20 RPD', tpm: '250K TPM' }
+]);
+
+const selectedModel = ref('gemini-3.6-flash');
+const modelCooldowns = ref({});
+const remainingSeconds = ref({});
+const modelSwitchNotification = ref('');
 
 const question = ref('');
 const answer = ref('');
@@ -202,6 +312,69 @@ const loading = ref(false);
 const error = ref('');
 const history = ref([]);
 const recentId = ref(null);
+
+let cooldownTimer = null;
+
+const updateCooldowns = () => {
+  const now = Date.now();
+  const newRemaining = {};
+  let changed = false;
+
+  for (const [mId, unavailUntil] of Object.entries(modelCooldowns.value)) {
+    if (unavailUntil > now) {
+      newRemaining[mId] = Math.ceil((unavailUntil - now) / 1000);
+    } else {
+      delete modelCooldowns.value[mId];
+      changed = true;
+    }
+  }
+  remainingSeconds.value = newRemaining;
+
+  if (changed && typeof window !== 'undefined') {
+    localStorage.setItem('gemini_model_cooldowns', JSON.stringify(modelCooldowns.value));
+  }
+};
+
+const isModelDisabled = (modelId) => {
+  const unavailUntil = modelCooldowns.value[modelId];
+  return Boolean(unavailUntil && unavailUntil > Date.now());
+};
+
+const markModelUnavailable = (modelId, cooldownSecs = 60) => {
+  const unavailUntil = Date.now() + (cooldownSecs * 1000);
+  modelCooldowns.value[modelId] = unavailUntil;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('gemini_model_cooldowns', JSON.stringify(modelCooldowns.value));
+  }
+  updateCooldowns();
+
+  if (selectedModel.value === modelId) {
+    // Prioritize high-quota models (500 RPD) when switching
+    const priorityOrder = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-3-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    
+    let nextAvailable = availableModels.value.find(m => priorityOrder.includes(m.id) && !isModelDisabled(m.id));
+    if (!nextAvailable) {
+      nextAvailable = availableModels.value.find(m => !isModelDisabled(m.id));
+    }
+    
+    if (nextAvailable) {
+      const prevModelObj = availableModels.value.find(m => m.id === modelId);
+      const prevModelName = prevModelObj ? prevModelObj.name : modelId;
+      selectedModel.value = nextAvailable.id;
+      modelSwitchNotification.value = `Rate limit on "${prevModelName}". Auto-switched to "${nextAvailable.name}" (${nextAvailable.rpd}) and re-sent your question!`;
+      setTimeout(() => {
+        modelSwitchNotification.value = '';
+      }, 8000);
+    }
+  }
+};
+
+const selectModelFromCard = (modelId) => {
+  if (!isModelDisabled(modelId)) {
+    selectedModel.value = modelId;
+    showQuotaModal.value = false;
+  }
+};
 
 onMounted(() => {
   if (typeof window !== 'undefined') {
@@ -211,14 +384,30 @@ onMounted(() => {
       userApiKey.value = sanitized;
       inputApiKey.value = sanitized;
     } else {
-      // Auto open modal on first visit if no key is saved
       showKeyModal.value = true;
     }
+
+    const savedModel = localStorage.getItem('gemini_selected_model');
+    if (savedModel && availableModels.value.some(m => m.id === savedModel)) {
+      selectedModel.value = savedModel;
+    } else if (props.model) {
+      selectedModel.value = props.model;
+    }
+
+    const savedCooldowns = localStorage.getItem('gemini_model_cooldowns');
+    if (savedCooldowns) {
+      try {
+        modelCooldowns.value = JSON.parse(savedCooldowns);
+      } catch (e) {}
+    }
+
+    updateCooldowns();
+    cooldownTimer = setInterval(updateCooldowns, 1000);
     
-    // Listen for Escape key to close modal
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && showKeyModal.value) {
-        showKeyModal.value = false;
+      if (e.key === 'Escape') {
+        if (showKeyModal.value) showKeyModal.value = false;
+        if (showQuotaModal.value) showQuotaModal.value = false;
       }
     });
 
@@ -244,11 +433,21 @@ onMounted(() => {
   }
 });
 
+onUnmounted(() => {
+  if (cooldownTimer) clearInterval(cooldownTimer);
+});
+
 watch(history, (newHistory) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('ask_mini_history', JSON.stringify(newHistory));
   }
 }, { deep: true });
+
+watch(selectedModel, (newModel) => {
+  if (typeof window !== 'undefined' && newModel) {
+    localStorage.setItem('gemini_selected_model', newModel);
+  }
+});
 
 const effectiveApiKey = computed(() => {
   const key = userApiKey.value || defaultApiKey;
@@ -272,11 +471,12 @@ const maskedKey = computed(() => {
 });
 
 const validModelName = computed(() => {
-  const m = (props.model || '').trim();
-  if (!m) {
-    return 'gemini-3.6-flash';
+  const m = (selectedModel.value || props.model || '').trim();
+  if (isModelDisabled(m)) {
+    const next = availableModels.value.find(item => !isModelDisabled(item.id));
+    if (next) return next.id;
   }
-  return m;
+  return m || 'gemini-3.6-flash';
 });
 
 const toggleKeyModal = () => {
@@ -334,8 +534,10 @@ const deleteHistory = (id) => {
   history.value = history.value.filter(item => item.id !== id);
 };
 
-const askQuestion = async () => {
-  if (!question.value.trim()) return;
+const askQuestion = async (overridePrompt = null, attemptCount = 0) => {
+  const promptStr = typeof overridePrompt === 'string' ? overridePrompt : (question.value || '');
+  const currentQuestionText = String(promptStr).trim();
+  if (!currentQuestionText) return;
   
   if (!hasApiKey.value) {
     showKeyModal.value = true;
@@ -343,14 +545,14 @@ const askQuestion = async () => {
     return;
   }
 
-  const currentQuestionText = question.value.trim();
   loading.value = true;
   error.value = '';
   answer.value = '';
-  question.value = '';
+  if (typeof overridePrompt !== 'string') {
+    question.value = '';
+  }
   
   try {
-    // 1. Fetch llms-full.txt context file gracefully (does not crash if missing in dev mode)
     let contextText = '';
     try {
       const txtRes = await fetch('/llms-full.txt');
@@ -381,7 +583,7 @@ const askQuestion = async () => {
       generationConfig: { temperature: 0.3 }
     };
 
-    // 2. Attempt Streaming Request
+    // Attempt Streaming Request
     let streamSuccess = false;
     try {
       const streamRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:streamGenerateContent?alt=sse&key=${apiKeyToUse}`, {
@@ -426,7 +628,6 @@ const askQuestion = async () => {
           }
         }
 
-        // Process any remaining buffer
         if (buffer.trim().startsWith('data: ')) {
           const dataStr = buffer.trim().slice(6).trim();
           if (dataStr && dataStr !== '[DONE]') {
@@ -443,6 +644,15 @@ const askQuestion = async () => {
       } else if (!streamRes.ok) {
         const errData = await streamRes.json().catch(() => ({}));
         const apiErrMsg = errData.error?.message || `HTTP ${streamRes.status}`;
+        
+        if (streamRes.status === 429 || streamRes.status === 503 || apiErrMsg.toLowerCase().includes('quota') || apiErrMsg.toLowerCase().includes('rate limit') || apiErrMsg.toLowerCase().includes('resource_exhausted') || apiErrMsg.toLowerCase().includes('unavailable')) {
+          markModelUnavailable(modelToUse, 60);
+          if (attemptCount < 2) {
+            return askQuestion(currentQuestionText, attemptCount + 1);
+          }
+          throw new Error(`Model "${modelToUse}" is temporarily rate-limited. Auto-switched to "${selectedModel.value}".`);
+        }
+
         if (streamRes.status === 400 || streamRes.status === 401 || streamRes.status === 403 || apiErrMsg.toLowerCase().includes('key')) {
           showKeyModal.value = true;
           throw new Error(`API key error: ${apiErrMsg}. Please check if your Gemini API key is valid.`);
@@ -450,11 +660,11 @@ const askQuestion = async () => {
         throw new Error(`Google Gemini API error: ${apiErrMsg}`);
       }
     } catch (streamErr) {
-      if (streamErr.message && streamErr.message.includes('API key error')) throw streamErr;
+      if (streamErr.message && (streamErr.message.includes('API key error') || streamErr.message.includes('rate-limited'))) throw streamErr;
       console.warn('Streaming failed, falling back to standard generateContent:', streamErr);
     }
 
-    // 3. Fallback to Non-Streaming Request if streaming produced no text
+    // Fallback to Non-Streaming Request if streaming produced no text
     if (!streamSuccess || !answer.value.trim()) {
       loading.value = true;
       const syncRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${apiKeyToUse}`, {
@@ -466,6 +676,15 @@ const askQuestion = async () => {
       if (!syncRes.ok) {
         const errData = await syncRes.json().catch(() => ({}));
         const apiErrMsg = errData.error?.message || `HTTP ${syncRes.status}`;
+        
+        if (syncRes.status === 429 || syncRes.status === 503 || apiErrMsg.toLowerCase().includes('quota') || apiErrMsg.toLowerCase().includes('rate limit') || apiErrMsg.toLowerCase().includes('resource_exhausted') || apiErrMsg.toLowerCase().includes('unavailable')) {
+          markModelUnavailable(modelToUse, 60);
+          if (attemptCount < 2) {
+            return askQuestion(currentQuestionText, attemptCount + 1);
+          }
+          throw new Error(`Model "${modelToUse}" is temporarily rate-limited. Auto-switched to "${selectedModel.value}".`);
+        }
+
         if (syncRes.status === 400 || syncRes.status === 401 || syncRes.status === 403 || apiErrMsg.toLowerCase().includes('key')) {
           showKeyModal.value = true;
           throw new Error(`API key error: ${apiErrMsg}. Please check if your Gemini API key is valid.`);
@@ -594,6 +813,245 @@ const askQuestion = async () => {
 .btn-key-toggle:hover {
   opacity: 0.92;
   transform: translateY(-1px);
+}
+
+/* Model Selection Toolbar */
+.model-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: var(--vp-c-bg, #ffffff);
+  border: 1px solid var(--vp-c-border, #e2e8f0);
+}
+
+.model-select-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.model-select-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--vp-c-text-1);
+}
+
+.model-brain-icon {
+  font-size: 1.1rem;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.model-dropdown {
+  padding: 0.45rem 2rem 0.45rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--vp-c-border, #cbd5e1);
+  background: var(--vp-c-bg-alt, #f8fafc);
+  color: var(--vp-c-text-1);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  transition: border-color 0.2s;
+}
+
+.model-dropdown:focus {
+  outline: none;
+  border-color: var(--vp-c-accent, #3eaf7c);
+}
+
+.btn-view-quotas {
+  background: transparent;
+  color: var(--vp-c-accent, #3eaf7c);
+  border: 1px solid var(--vp-c-accent, #3eaf7c);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-view-quotas:hover {
+  background: rgba(62, 175, 124, 0.08);
+}
+
+.notification-banner {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Quotas Modal Dialog */
+.quota-modal-dialog {
+  max-width: 850px;
+}
+
+.quota-modal-header {
+  margin-bottom: 1rem;
+}
+
+.quota-modal-header h3 {
+  margin: 0 0 0.4rem 0;
+  font-size: 1.2rem;
+  color: var(--vp-c-text-1);
+}
+
+.quota-modal-intro {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.45;
+}
+
+.quota-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.quota-card {
+  background: var(--vp-c-bg-alt, #f8fafc);
+  border: 1px solid var(--vp-c-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.quota-card.card-selected {
+  border-color: var(--vp-c-accent, #3eaf7c);
+  border-width: 2px;
+  background: var(--vp-c-bg, #ffffff);
+  box-shadow: 0 4px 12px rgba(62, 175, 124, 0.12);
+}
+
+.quota-card.card-disabled {
+  opacity: 0.75;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.quota-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.quota-card-title-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.quota-card-title-group strong {
+  font-size: 0.95rem;
+  color: var(--vp-c-text-1);
+}
+
+.quota-status-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.18rem 0.5rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.tag-selected {
+  background: #def7ec;
+  color: #03543f;
+}
+
+.tag-available {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.tag-cooldown {
+  background: #ffe4e6;
+  color: #9f1239;
+}
+
+.quota-card-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.35;
+}
+
+.quota-metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--vp-c-bg, #ffffff);
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--vp-c-border, #e2e8f0);
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.metric-label {
+  color: var(--vp-c-text-2);
+}
+
+.metric-val {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.btn-card-select {
+  width: 100%;
+  padding: 0.55rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--vp-c-accent, #3eaf7c);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-card-select:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-card-select:disabled {
+  background: var(--vp-c-bg-mute, #cbd5e1);
+  color: var(--vp-c-text-2, #64748b);
+  cursor: not-allowed;
+}
+
+.quota-card.card-disabled .btn-card-select:disabled {
+  background: #fda4af;
+  color: #881337;
 }
 
 /* Floating Modal Backdrop & Dialog */
