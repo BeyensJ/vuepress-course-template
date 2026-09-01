@@ -11,16 +11,16 @@
     "docs:update-package": "npx vp-update"
   },
   "devDependencies": {
-    "@vuepress/bundler-vite": "^2.0.0-rc.28",
-    "@vuepress/theme-default": "^2.0.0-rc.128",
-    "sass-embedded": "^1.99.0",
-    "vue": "^3.5.32",
-    "vuepress": "^2.0.0-rc.28",
-    "vuepress-theme-hope": "^2.0.0-rc.106"
+    "@vuepress/bundler-vite": "2.0.0-rc.30",
+    "@vuepress/theme-default": "2.0.0-rc.130",
+    "sass-embedded": "^1.103.1",
+    "vue": "^3.5.42",
+    "vuepress": "2.0.0-rc.30",
+    "vuepress-theme-hope": "2.0.0-rc.107"
   },
   "dependencies": {
-    "@vuepress/plugin-llms": "^2.0.0-rc.128",
-    "@vuepress/plugin-slimsearch": "^2.0.0-rc.128",
-    "mermaid": "^11.14.0"
+    "@vuepress/plugin-llms": "2.0.0-rc.130",
+    "@vuepress/plugin-slimsearch": "2.0.0-rc.130",
+    "mermaid": "^11.17.2"
   }
 }
