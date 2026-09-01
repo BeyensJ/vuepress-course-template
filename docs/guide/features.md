@@ -153,5 +153,34 @@ Embed real-time browser support tables from [caniuse.com](https://caniuse.com).
 
 <Caniuse feat="flexbox" interactive />
 
+---
+
+## AI Chatbot (`GeminiCourseChat`)
+
+This template includes an interactive AI assistant component (`<GeminiCourseChat />`) powered by Google Gemini to help students ask questions directly about the course material.
+
+### Key Features
+- **Context-Aware Assistance**: Answers questions using the automatically generated course documentation context (`llms-full.txt`).
+- **Student API Key Setup**: Guided modal onboarding for students to supply their own free Google Gemini API key, securely stored in local browser storage (`localStorage`).
+- **Model Selection & Failover**: Toggle between different Gemini models (e.g. Gemini 3.6 Flash, 3.5 Flash Lite) with built-in rate-limit monitoring and automatic failover handling.
+- **Persistent Local History**: Automatically saves question history locally for easy reference and management.
+
+### Basic Usage
+
+Embed the chatbot into any Markdown page:
+
+```html
+<GeminiCourseChat />
+```
+
+### Component Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `botName` | String | `'CourseBot'` | Custom display name for the chatbot assistant. |
+| `model` | String | `'gemini-3.6-flash'` | Default Gemini model identifier to start with. |
+| `systemPrompt` | String | `''` | Custom system instructions to override the default prompt behavior. |
+
+
 
 

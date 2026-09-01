@@ -93,6 +93,29 @@ navbar: [
 ],
 ```
 
+### Left Table of Contents Sidebar (`config.js`)
+This template features a custom left-side Table of Contents (TOC) sidebar, converting the default page TOC into a fixed left sidebar on desktop displays.
+
+#### Toggle Feature
+You can enable or disable this feature via the `enableLeftTocSidebar` variable in `docs/.vuepress/config.js`:
+
+```javascript
+// docs/.vuepress/config.js
+const enableLeftTocSidebar = true // Set to false to revert to default theme TOC
+```
+
+> [!IMPORTANT]
+> Ensure `sidebar: false` is set in your `hopeTheme()` configuration in `docs/.vuepress/config.js` when enabling this feature. Disabling the standard sidebar prevents navigation links from overlapping with the custom left TOC.
+
+```javascript
+// docs/.vuepress/config.js
+theme: hopeTheme({
+  sidebar: false, // Must be set to false when using Left TOC Sidebar
+  toc: true,      // Must be set to true to generate page headings
+  // ...
+})
+```
+
 ---
 
 ## LLMS Support

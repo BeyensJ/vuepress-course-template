@@ -6,11 +6,18 @@ import sidebar from './sidebar.js'
 
 const base_url = "https://itf-course-template.netlify.app/";
 
+// Configuration setting to toggle custom left TOC sidebar style
+const enableLeftTocSidebar = false
+
+
 export default defineUserConfig({
     lang: 'en-US',
-
     title: 'Vuepress Template',
     description: '',
+    head: [
+        ...(enableLeftTocSidebar ? [
+            ['script', {}, `document.documentElement.classList.add('left-toc-sidebar')`]
+        ] : []),],
     theme: hopeTheme({
         hostname: base_url,
         logo: '/logo.png',
@@ -33,7 +40,8 @@ export default defineUserConfig({
 
         },
 
-        sidebar,
+        sidebar: sidebar,
+        toc: true,
         footer: "Copyright © 2025 Beyens J.",
         displayFooter: true,
         navbar: [
