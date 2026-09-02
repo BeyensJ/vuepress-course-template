@@ -181,6 +181,120 @@ Embed the chatbot into any Markdown page:
 | `model` | String | `'gemini-3.6-flash'` | Default Gemini model identifier to start with. |
 | `systemPrompt` | String | `''` | Custom system instructions to override the default prompt behavior. |
 
+---
+
+## Interactive IT Course Components
+
+These custom components are designed specifically for Computer Science & IT documentation to increase student engagement, self-assessment, and visual clarity.
+
+### Interactive Quiz (`<Quiz />`)
+
+Multiple-choice knowledge check with instant feedback and explanations.
+
+```html
+<Quiz 
+  question="Which HTTP method should be used to partially update a resource?"
+  :options="['GET', 'POST', 'PUT', 'PATCH']"
+  :correct-index="3"
+  explanation="PATCH is used for partial updates, whereas PUT replaces the entire resource."
+/>
+```
+
+<Quiz 
+  question="Which HTTP method should be used to partially update a resource?"
+  :options="['GET', 'POST', 'PUT', 'PATCH']"
+  :correct-index="3"
+  explanation="PATCH is used for partial updates, whereas PUT replaces the entire resource."
+/>
+
+---
+
+### Flashcard (`<Flashcard />`)
+
+3D flip card for quick recall of technical terms, acronyms, CLI flags, or status codes.
+
+```html
+<Flashcard category="HTTP Status Codes" term="HTTP 403 Forbidden">
+  <template #back>
+    The server understands the request but refuses to authorize it. Unlike 401 Unauthorized, re-authenticating will not make a difference.
+  </template>
+</Flashcard>
+```
+
+<Flashcard category="HTTP Status Codes" term="HTTP 403 Forbidden">
+  <template #back>
+    The server understands the request but refuses to authorize it. Unlike 401 Unauthorized, re-authenticating will not make a difference.
+  </template>
+</Flashcard>
+
+---
+
+### Download Card (`<DownloadCard />`)
+
+Visual card component for downloadable course assets (starter zips, cheatsheet PDFs, database dumps).
+
+```html
+<DownloadCard 
+  title="Lab 01 Starter Project"
+  description="Download the initial HTML/CSS boilerplate files for Lab 01."
+  filename="lab01-starter.zip"
+  fileSize="1.2 MB"
+  url="/files/lab01-starter.zip"
+/>
+```
+
+<DownloadCard 
+  title="Logo"
+  description="Download the course logo."
+  filename="logo.png"
+  url="/logo.png"
+/>
+
+---
+
+### Technical KeyTerm Tooltip (`<KeyTerm />`)
+
+Displays an inline technical glossary tooltip when students hover or tap on terms or acronyms.
+
+```html
+Always verify your <KeyTerm term="CORS" definition="Cross-Origin Resource Sharing is a HTTP-header based security mechanism.">CORS</KeyTerm> configuration before deployment.
+```
+
+Always verify your <KeyTerm term="CORS" definition="Cross-Origin Resource Sharing is an HTTP-header based security mechanism allowing servers to specify permitted origins.">CORS</KeyTerm> configuration before deployment.
+
+---
+
+### Interactive Lab Stepper (`<StepByStep />`)
+
+Wizard stepper component for step-by-step lab tutorials or algorithm walkthroughs.
+
+```html
+<StepByStep title="Lab Setup Guide" :steps="['Install Node', 'Initialize', 'Start Dev Server']">
+  <template #step-1>
+    <p>Download Node.js LTS from official website.</p>
+  </template>
+  <template #step-2>
+    <p>Run <code>npm init -y</code> in your workspace.</p>
+  </template>
+  <template #step-3>
+    <p>Run <code>npm run dev</code> to verify server startup.</p>
+  </template>
+</StepByStep>
+```
+
+<StepByStep title="Lab Setup Guide" :steps="['Install Node', 'Initialize', 'Start Dev Server']">
+  <template #step-1>
+    <p>Download Node.js LTS from official website.</p>
+  </template>
+  <template #step-2>
+    <p>Run <code>npm init -y</code> in your workspace.</p>
+  </template>
+  <template #step-3>
+    <p>Run <code>npm run dev</code> to verify server startup.</p>
+  </template>
+</StepByStep>
+
+
 
 
 
